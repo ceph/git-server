@@ -1,7 +1,6 @@
 #!/bin/bash
 set -ex
 REPOS=(${REPOS})
-REPO_AGE=${REPO_AGE:-"1 month"}
 cd /git
 set +e
 for repo in ${REPOS[@]}; do
@@ -9,6 +8,10 @@ for repo in ${REPOS[@]}; do
   if [ -e $base -o -e $base.git ]; then
     continue
   fi
-  git clone --mirror --shallow-since "$REPO_AGE" --shallow-submodules --no-single-branch $repo || \
-  git clone --mirror --depth 10 --shallow-submodules --no-single-branch $repo
+  # Full mirror clone on purpose.  Shallow mirrors (--shallow-since/--depth)
+  # look cheaper but cost more to serve: git never writes a commit-graph in a
+  # shallow repo, and every clone served from one is grafted to the same
+  # truncated history.  Disk is cheap; the git-data PVC sat at 8G/200G after
+  # a month of shallow mirrors.
+  git clone --mirror $repo
 done
